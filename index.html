@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Show Manager Pro - Admin & Persistence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .admin-section { border-left: 4px solid #ef4444; }
+        .opt-membership { font-weight: bold; color: #2563eb; background-color: #eff6ff; }
+        input:focus, select:focus, textarea:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Show Manager Realtime</h1>
+            <p class="text-gray-600 italic text-sm">Penyimpanan Otomatis Jam, Tanggal & Sandi per Show</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEFT COLUMN: ADMIN PANEL -->
+            <div class="space-y-6">
+                <div class="glass-card rounded-2xl p-6 shadow-xl admin-section">
+                    <h3 class="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+                        🛡️ Panel Admin (Simpan Data)
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nama Show</label>
+                            <input list="showList" id="adminShow" class="w-full p-2 text-sm border border-gray-200 rounded-lg outline-none bg-white" placeholder="Ketik atau pilih show...">
+                            <datalist id="showList">
+                                <option value="Seleksi PMDK">
+                                <option value="JKT48 Shcool">
+                                <option value="Andai Ku Bukan Idola">
+                                <option value="Z Vs Alpha">
+                                <option value="JKT48 Fight : Dream,PASSION,LOVE">
+                                <option value="Membership Show">
+                            </datalist>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tanggal Show</label>
+                                <input type="date" id="adminDate" class="w-full p-2 text-sm border border-gray-200 rounded-lg outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Jam Show</label>
+                                <input type="text" id="adminTime" class="w-full p-2 text-sm border border-gray-200 rounded-lg outline-none bg-white" placeholder="19.00 WIB">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Sandi Replay</label>
+                            <input type="text" id="adminPass" class="w-full p-2 text-sm border border-gray-200 rounded-lg outline-none bg-white" placeholder="Sandi123">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Input Link (Baris Baru)</label>
+                            <textarea id="adminLinks" rows="4" class="w-full p-2 text-xs border border-gray-200 rounded-lg outline-none font-mono" placeholder="Paste link-link di sini..."></textarea>
+                        </div>
+                        <button 
+                            onclick="saveShowToDatabase()"
+                            class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-bold transition-all shadow-lg"
+                        >
+                            Simpan Ke Database
+                        </button>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-gray-100 space-y-2">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Manajemen Memori</p>
+                        <button 
+                            onclick="clearAllLinks()"
+                            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-xs font-semibold transition-all border border-gray-200"
+                        >
+                            🗑️ Reset Semua Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6 shadow-md border border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        📋 Antrian Link Aktif
+                    </h3>
+                    <div id="linkDatabaseView" class="text-[10px] font-mono text-gray-500 max-h-60 overflow-y-auto space-y-1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDDLE COLUMN: FORM JADWAL -->
+            <div class="space-y-6">
+                <div class="glass-card rounded-2xl p-6 shadow-xl border border-blue-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Form Jadwal</h3>
+                        <span id="linkCounter" class="text-xs font-bold bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
+                            Sisa: 0
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Pilih Show Terdaftar</label>
+                            <select id="inShow" onchange="syncDataFromSelection()" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                <option value="">-- Pilih Show --</option>
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Pilih Tanggal</label>
+                                <input type="date" id="inDate" onchange="syncDataFromSelection()" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Jam</label>
+                                <input type="text" id="inTime" oninput="updatePreview()" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="19.00 WIB">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-bold text-gray-500 uppercase">Link Utama</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-bold text-gray-400">AUTO</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="linkModeToggle" onchange="toggleLinkMode()" class="sr-only peer">
+                                        <div class="w-8 h-4 bg-blue-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                    <span class="text-[10px] font-bold text-gray-400">MANUAL</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="inMain" oninput="updatePreview()" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-400" placeholder="Link muncul otomatis...">
+                                <button id="btnNextLink" onclick="rotateLink()" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg border border-gray-200 transition-colors">
+                                    🔄
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sandi Replay</label>
+                            <input type="text" id="inPass" oninput="updatePreview()" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Sandi otomatis...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: PREVIEW -->
+            <div class="space-y-6">
+                <div class="glass-card rounded-2xl p-6 shadow-xl border-t-4 border-blue-600 sticky top-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Preview Pesan</h3>
+                        <button 
+                            onclick="copyToClipboard()"
+                            id="copyBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-lg"
+                        >
+                            Salin Format
+                        </button>
+                    </div>
+                    
+                    <div id="formattedOutput" class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm whitespace-pre-wrap font-sans leading-relaxed text-gray-700 overflow-y-auto max-h-[550px]">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white px-8 py-3 rounded-full text-sm font-bold opacity-0 transition-opacity pointer-events-none z-50 shadow-2xl">
+        Berhasil!
+    </div>
+
+    <script>
+        const STORAGE_KEY = "show_manager_v7_db";
+        const REPLAY_BASE_URL = "https://realtime48show.vercel.app/";
+        
+        let db = {}; // Format: { "ShowName|YYYY-MM-DD": { links: [], pass: "", time: "" } }
+        let isManualMode = false;
+
+        // Initialize App
+        window.onload = () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) db = JSON.parse(saved);
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('adminDate').value = today;
+            document.getElementById('inDate').value = today;
+            
+            refreshDropdowns();
+            syncDataFromSelection();
+            toggleLinkMode();
+        };
+
+        // --- DATABASE OPERATIONS ---
+
+        function saveShowToDatabase() {
+            const name = document.getElementById('adminShow').value.trim();
+            const date = document.getElementById('adminDate').value;
+            const time = document.getElementById('adminTime').value.trim();
+            const pass = document.getElementById('adminPass').value.trim();
+            const rawLinks = document.getElementById('adminLinks').value;
+
+            if (!name || !date) { alert("Nama Show dan Tanggal wajib diisi!"); return; }
+
+            const key = `${name}|${date}`;
+            const links = rawLinks.split('\n').map(l => l.trim()).filter(l => l !== "");
+
+            // Merge or create entry
+            if (!db[key]) {
+                db[key] = { links: [], pass: "", time: "" };
+            }
+
+            if (links.length > 0) db[key].links = [...db[key].links, ...links];
+            if (pass) db[key].pass = pass;
+            if (time) db[key].time = time;
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            
+            // UI Feedback
+            refreshDropdowns();
+            syncDataFromSelection();
+            showToast("Data Show disimpan!");
+            
+            // Clear admin inputs
+            document.getElementById('adminLinks').value = "";
+        }
+
+        function refreshDropdowns() {
+            const select = document.getElementById('inShow');
+            const currentVal = select.value;
+            const uniqueNames = new Set();
+            
+            // Add from DB
+            Object.keys(db).forEach(key => uniqueNames.add(key.split('|')[0]));
+            
+            // Standard Shows according to user request
+            const standardShows = [
+                "Seleksi PMDK", 
+                "JKT48 Shcool", 
+                "Andai Ku Bukan Idola", 
+                "Z Vs Alpha", 
+                "JKT48 Fight : Dream,PASSION,LOVE",
+                "Membership Show"
+            ];
+            standardShows.forEach(n => uniqueNames.add(n));
+
+            select.innerHTML = '<option value="">-- Pilih Show --</option>';
+            Array.from(uniqueNames).sort().forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                if(name === "Membership Show") opt.className = "opt-membership";
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
+
+        function syncDataFromSelection() {
+            const name = document.getElementById('inShow').value;
+            const date = document.getElementById('inDate').value;
+            const key = `${name}|${date}`;
+            
+            const entry = db[key];
+            
+            if (entry) {
+                if (!isManualMode) {
+                    document.getElementById('inMain').value = entry.links.length > 0 ? entry.links[0] : "";
+                }
+                document.getElementById('inPass').value = entry.pass || "";
+                document.getElementById('inTime').value = entry.time || "19.00 WIB";
+            } else {
+                if (!isManualMode) document.getElementById('inMain').value = "";
+            }
+            
+            renderLinkList(entry ? entry.links : []);
+            updatePreview();
+        }
+
+        function renderLinkList(links) {
+            const container = document.getElementById('linkDatabaseView');
+            const counter = document.getElementById('linkCounter');
+            
+            container.innerHTML = "";
+            counter.innerText = `Sisa: ${links.length}`;
+
+            if (links.length === 0) {
+                container.innerHTML = "<p class='italic opacity-50 text-center py-4'>Belum ada link terdaftar</p>";
+                return;
+            }
+
+            links.forEach((link, i) => {
+                const div = document.createElement('div');
+                div.className = `p-1 truncate border-b border-gray-100 flex items-center gap-2 ${i === 0 ? 'text-blue-600 font-bold bg-blue-50' : 'text-gray-400'}`;
+                div.innerHTML = `<span class="bg-gray-200 text-gray-600 px-1 rounded text-[8px]">${i+1}</span> <span>${link}</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        // --- UI CONTROLS ---
+
+        function toggleLinkMode() {
+            isManualMode = document.getElementById('linkModeToggle').checked;
+            const input = document.getElementById('inMain');
+            const btn = document.getElementById('btnNextLink');
+            
+            input.disabled = !isManualMode;
+            if(isManualMode) {
+                btn.classList.add('opacity-30', 'pointer-events-none');
+            } else {
+                btn.classList.remove('opacity-30', 'pointer-events-none');
+                syncDataFromSelection();
+            }
+        }
+
+        function rotateLink() {
+            const name = document.getElementById('inShow').value;
+            const date = document.getElementById('inDate').value;
+            const key = `${name}|${date}`;
+
+            if (db[key] && db[key].links.length > 1) {
+                const first = db[key].links.shift();
+                db[key].links.push(first);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+                syncDataFromSelection();
+            }
+        }
+
+        function formatIndoDate(dateStr) {
+            if (!dateStr) return null;
+            const dateObj = new Date(dateStr);
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            return `${String(dateObj.getDate()).padStart(2, '0')} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+        }
+
+        function updatePreview() {
+            const show = document.getElementById('inShow').value || "[NAMA SHOW]";
+            const rawDate = document.getElementById('inDate').value;
+            const date = formatIndoDate(rawDate) || "[TANGGAL]";
+            const time = document.getElementById('inTime').value || "19.00 WIB";
+            const link = document.getElementById('inMain').value || "[LINK TIDAK ADA]";
+            const pass = document.getElementById('inPass').value || "[SANDI]";
+
+            // Generate "Dibuat" timestamp
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            const timestamp = `${formatIndoDate(now.toISOString().split('T')[0])} ${timeString}`;
+
+            let template = "";
+            // Special text for "Membership Show"
+            if (show === "Membership Show") {
+                template = `> ⚠️ *IMPORTANT:* _Jangan keluar masuk streaming karena di setiap akses memiliki token aktif yang dapat menyebabkan streaming kaka bisa invalid/tidak bisa ditonton! (HARAP DIBACA DAN DIPAHAMI)_
+
+🎭 Membership: Streaming Access
+📆 Durasi: 1 Bulan
+👥 Akses: Live Streaming + Replay (jika tersedia)
+📅 Dibuat: ${timestamp}
+
+🔗 Link Membership:
+ ${link}
+                
+🚨 Link Candangan : realtime48.my.id
+
+📥Link Grup : https://chat.whatsapp.com/IblSlhDwXyE3ecrZtioqcH
+
+📧 Link Replay : 
+1. https://realtime48show.vercel.app/
+2. https://replayshowstreaming.my.id/
+
+🗝️Kode Master Replay : ${pass}
+
+Selamat menikmati membership streaming, dan semoga pengalaman streaming ini berkesan! Jika ada kendala, jangan ragu untuk menghubungi kami. 🤗😆`;
+            } else {
+                // Default text for all other shows
+                template = `> *Show : ${show}*
+> *Akses tanggal : ${date} jam : ${time}*
+
+📢 *AKSES LIVE STREAMING pada LINK UTAMA Dan REPLAY* : 
+
+1️⃣ Link Utama: 🔗 ${link}
+                
+🚨 Link Cadangan : 🔗 realtime48.my.id
+
+🔗Replay ${date} : ${REPLAY_BASE_URL}
+🗝️ Sandi : ${pass}
+
+📧*Cara akses Live Chat* :
+  Hapus cache pada browser yang digunakan... 
+
+⚠️ *PENTING UNTUK DIPERHATIKAN*:
+1 Akun = 1 Device/browser : Jangan login di dua perangkat bersamaan.
+Waktu Akses: Disarankan masuk website saat live sudah dimulai (Cek info terbaru di saluran).
+Browser: Gunakan Chrome atau Opera untuk pengalaman terbaik.
+Kendala Akses: Jika tombol masuk tidak berfungsi, mohon matikan AdBlock/DNS AdGuard.
+
+Jika ada kendala, segera hubungi Admin. Selamat menonton! ✨`;
+            }
+            document.getElementById('formattedOutput').innerText = template;
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('formattedOutput').innerText;
+            const name = document.getElementById('inShow').value;
+            const date = document.getElementById('inDate').value;
+            const key = `${name}|${date}`;
+
+            if (!document.getElementById('inMain').value) {
+                alert("Link utama kosong!"); return;
+            }
+
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            if (!isManualMode && db[key] && db[key].links.length > 0) {
+                db[key].links.shift();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+                syncDataFromSelection();
+                showToast("Disalin & Link Dipakai!");
+            } else {
+                showToast("Berhasil Disalin!");
+            }
+        }
+
+        function clearAllLinks() {
+            if(confirm("Hapus semua data show dan link dari database lokal?")) {
+                db = {};
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 2500);
+        }
+    </script>
+</body>
+</html>
